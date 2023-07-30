@@ -13,13 +13,9 @@ This is a gambling discord bot for the roblox game Pet Simulator X, it handles d
 
 ## Features
 
-🔥 **Affiliates:**
-When affiliating someone you get 250m Balance and your affiliate gets a percentage of your bets without taking anything from you
-💎 **Rake Back:**
-Get a percentage of your losses back
-💖 **Tipping:**
-Give someone free gems
-🌧️ **Rains:**
-Rain your gems and they get split between everyone that joins the rain
+🔥 **Affiliates:** When affiliating someone you get 250m Balance and your affiliate gets a percentage of your bets without taking anything from you
+💎 **Rake Back:** Get a percentage of your losses back
+💖 **Tipping:** Give someone free gems
+🌧️ **Rains:** Rain your gems and they get split between everyone that joins the rain
 
 Probably more features but i forgot
