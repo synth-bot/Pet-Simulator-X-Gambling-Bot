@@ -5,7 +5,7 @@ This is a gambling discord bot for the roblox game Pet Simulator X, it handles d
 
 ## Games
 
-💣 - **Mines:** The user picks a bet and a certain amount of bombs and has to press buttons in a 5x5 grid to uncover tiles to either increase their multiplier if its safe, or lose their multiplier if its a bomb\n
+💣 - **Mines:** The user picks a bet and a certain amount of bombs and has to press buttons in a 5x5 grid to uncover tiles to either increase their multiplier if its safe, or lose their multiplier if its a bomb
 🪜 - **Towers:** Pick a bet and climb up a tower, choose either middle left or right, one will make you fall and the others will make you climb higher and increase your multiplier
 💎 - **Keno:** Choose 6 tiles on a 5x5 grid and 6 tiles will be randomly selected, depending on how many randomly chosen tiles land on your tiles you will get a higher multiplier
 🚀 - **Crash:** A live game where every minute a rocket launches and people bet on how high it will fly before it crashes
