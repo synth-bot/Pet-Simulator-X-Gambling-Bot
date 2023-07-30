@@ -10,6 +10,7 @@ This is a gambling discord bot for the roblox game Pet Simulator X, it handles d
 💎 - **Keno:** Choose 6 tiles on a 5x5 grid and 6 tiles will be randomly selected, depending on how many randomly chosen tiles land on your tiles you will get a higher multiplier  
 🚀 - **Crash:** A live game where every minute a rocket launches and people bet on how high it will fly before it crashes  
 🪙 - **Coinflip:** Pick a bet and heads or tails and a coinflip will be created a channel, anyone can join this coinflip or you can call the bot to play with you  
+💼 - **Cases:** Open cases to either get a pet worth less than what you paid for the case or more  
 
 ## Features
 
