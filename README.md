@@ -1,3 +1,7 @@
+https://discord.gg/fMGUv97j
+
+If you want to use this in your own server pls give me some credit
+
 A bunch of people wanted the source code and since i quit running it in my server its public
 
 # Pet-Simulator-X-Gambling-Bot
