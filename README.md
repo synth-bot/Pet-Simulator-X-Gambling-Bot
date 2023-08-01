@@ -1,3 +1,7 @@
+https://discord.gg/fMGUv97j
+
+If you want to use this in your own server pls give me some credit
+
 A bunch of people wanted the source code and since i quit running it in my server its public
 
 # Pet-Simulator-X-Gambling-Bot
@@ -17,4 +21,12 @@ This is a gambling discord bot for the roblox game Pet Simulator X, it handles d
 🔥 **Affiliates:** When affiliating someone you get 250m Balance and your affiliate gets a percentage of your bets without taking anything from you  
 💎 **Rake Back:** Get a percentage of your losses back  
 💖 **Tipping:** Give someone free gems  
-🌧️ **Rains:** Rain your gems and they get split between everyone that joins the rain  
+🌧️ **Rains:** Rain your gems and they get split between everyone that joins the rain
+
+## Setup
+
+1. Download the code (obviously)
+2. Run requirements.bat, this will install all the required packages
+3. Change everything in the config table to what the comments say to
+4. Run the python script, this will online the bot
+5. Execute the auto deposit and withdraw script while standing on the mailbox in psx

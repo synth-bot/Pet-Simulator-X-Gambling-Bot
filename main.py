@@ -1901,12 +1901,6 @@ async def unbox_cases(interaction: discord.Interaction, case_name: str, amount: 
                             value=f":gem: **Total Price**: ``{add_suffix(casedata['Price'] * amount)}``\n:gem: **Total Winnings**: ``{add_suffix(totalwinnings)}``\n:gem: **Profit**: ``-{add_suffix(totalcost - totalwinnings)}``",
                             inline=False)
         await interaction.edit_original_response(embed=embed)
-@bot.tree.command(name="set-gems", description="Open a Case")
-async def set_gems_am(interaction: discord.Interaction, user: discord.Member, amount: str):
-    amount = suffix_to_int(amount)
-    if interaction.user.id == 757289489373593661:
-        set_gems(str(user.id), amount)
-
 def billions(x, pos) :
     'The two args are the value and tick position'
     return '%1.1fB' % (x * 1e-9)
