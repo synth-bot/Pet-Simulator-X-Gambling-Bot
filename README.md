@@ -15,6 +15,9 @@ This is a gambling discord bot for the roblox game Pet Simulator X, it handles d
 🚀 - **Crash:** A live game where every minute a rocket launches and people bet on how high it will fly before it crashes  
 🪙 - **Coinflip:** Pick a bet and heads or tails and a coinflip will be created a channel, anyone can join this coinflip or you can call the bot to play with you  
 💼 - **Cases:** Open cases to either get a pet worth less than what you paid for the case or more  
+🍀 - **Upgrader:** Multiply your gems
+🃏 - **Blackjack:** Play Blackjack with your gems
+🎲 - **Dice:** Roll a dice against the bot and get 3x your bet if you win
 
 ## Features
 
