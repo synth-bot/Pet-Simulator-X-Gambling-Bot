@@ -13,44 +13,44 @@ from enum import Enum
 from discord import Button, ButtonStyle
 import requests
 import math
-from flask import Flask, request
-import pandas as pd
-import matplotlib.pyplot as plt
-from matplotlib.ticker import FuncFormatter
-
 Config = {
     "Towers" : {
-        "WinChance" : 64,  # Percent they will win when they click a tower
+        "WinChance" : 63,  # Percent they will win when they click a tower
         "Multis" : [1.42, 2.02, 2.86, 4.05, 5.69]  # Multipliers On The Blocks
     },
     "Mines" : {
-        "House" : 0.075,  # The Multiplier Will Be Multiplied by 1.00 - This
-        "Channel" : "" # REQUIRED this is a webhook link, when someome makes a mine game the layout will be posted to this channel. Make sure only you can see the channel this webhook is in
+        "House" : 0.1,  # The Multiplier Will Be Multiplied by 1.00 - This
     },
+    "Logs": 1142111414174097599,
     "Crash" : {
         "InstaCrashChance" : 10,  # Chance That It Will Crash at 1.00x
         "CrashChance" : 2,  # The Lower This Number Is The Higher Your Multipliers Will Average, I find 2 is the best
-        "ChannelID" : "1133722538678161519"  # Id of the channel crash games will be in
+        "ChannelID" : "1142104560249356329"  # Id of the channel crash games will be in
     },
     "Deposits": {
-        "Channel": "1133720318914084885" # Id of Channel Deposits will be shown in
+        "Channel": "1142068345785569312" # Id of Channel Deposits will be shown in
     },
     "Withdraws": {
-        "Channel": "1133720389558743110" # Id of Channel withdraws will be shown in
+        "Channel": "1142068363779113050" # Id of Channel withdraws will be shown in
     },
     "Coinflip" : {
-        "1v1" : "1133720431577276447",  # Channel That Coinflips Be In
-        "House" : 2.5  # House Edge (%)
+        "1v1" : "1141747862322040862",  # Channel That Coinflips Be In
+        "House": 3.5 # House Edge (%)
     },
     "Rains" : {
-        "Channel" : "1133720412921016351" # Set to the id the channel rains will be in
+        "Channel" : "1141748268875923617" # Set to the id the channel rains will be in
     },
-    "Rakeback" : 4, # Rakeback %
-    "PathToExecutorWorkspace" : "", # Path To Your Executors Workspace (for auto depos and withdraws)
+    "Upgrader": {
+        "House": 0.95
+    },
+    "Rakeback" : 1, # Rakeback %
+    "PathToExecutorWorkspace" : "C:/Users/henry/AppData/Local/Packages/ROBLOXCORPORATION.ROBLOX_55nm5eh3cm0pr/AC/workspace", # Path To Your Executors Workspace (for auto depos and withdraws)
     "RobloxUser" : "fersord",  # Your roblox username, people will deposit to this account
-    "DiscordBotToken": "your bot token" # The token of the discord bot
+    "DiscordBotToken": "token" # The token of the discord bot
 }
-
+def multiplier_to_percentage(multiplier, house):
+    percentage2 = (100 / multiplier) * house
+    return percentage2
 def percentage(percent, whole) :
     return (percent * whole) / 100.0
 def check_forecast(key, lat, lon) :
@@ -88,7 +88,12 @@ def calculate_mines_multiplier(minesamount, diamonds, houseedge) :
 
     house_edge = houseedge
     return (1 - house_edge) * nCr(25, diamonds) / nCr(25 - minesamount, diamonds)
-
+def succeed(message):
+    return discord.Embed(description=f":white_check_mark: {message}", color = 0x7cff6b)
+def infoe(message):
+    return discord.Embed(description=f":information_source: {message}", color = 0x57beff)
+def fail(message):
+    return discord.Embed(description=f":x: {message}", color = 0xff6b6b)
 def generate_board(minesa) :
     board = [
         ["s", "s", "s", "s", "s"],
@@ -119,7 +124,7 @@ class RPSSide(Enum) :
     Scissors = "Scissors"
 rpsgames = []
 codes = []
-words = ['apple', 'banana', 'fruit', 'car', 'base', 'good', 'life', 'up', 'shift', 'left', 'down', 'code']
+words = ['apple', 'banana', 'fruit', 'DaNu', 'is', 'a', 'W', 'FR', 'shift', 'left', 'down', 'code']
 rains = []
 crash = {
     "FinishTime" : 0,
@@ -150,160 +155,103 @@ def suffix_to_int(s) :
 
     return int(num)
 
+def readdata():
+    with open("data.json", "r") as infile:
+        return json.load(infile)
 
-def readdata() :
-    with open("userdata.json", "r") as infile :
-        # Load the data from the file into a dictionary
-        userdata = json.load(infile)
+def writedata(data):
+    with open("data.json", "w") as outfile:
+        json.dump(data, outfile, indent=4)
 
-        # Close the file
-
-        infile.close()
-        return (userdata)
-
-
-def writedata(data) :
-    with open("userdata.json", "w") as outfile :
-        json.dump(data, outfile)
-        outfile.close()
-
-def get_cases() :
-    with open("cases.json", "r") as infile :
-        # Load the data from the file into a dictionary
-        userdata2 = json.load(infile)
-
-        infile.close()
-        return userdata2['Cases']
+def get_cases():
+    data = readdata()
+    return data['cases']
 
 def add_bet(userid, bet, winnings):
-    if userid != "757289489373593661" and userid != "950134688683528283":
-        with open("bets.json", "r") as infile :
-            userdata = json.load(infile)
-        userdata['bets'].append([userid, round(time.time()), bet, winnings])
-        with open("bets.json", "w") as outfile:
-            json.dump(userdata, outfile)
-            outfile.close()
+    if userid not in ["757289489373593661", "950134688683528283"]:
+        data = readdata()
+        data['bets'].append({
+            "userid": userid,
+            "time": round(time.time()),
+            "bet": bet,
+            "winnings": winnings
+        })
+        writedata(data)
 
-caseslist = []
-for case in get_cases():
-    caseslist.append(case['Name'])
-def get_affiliate(uid) :
-    data = None
-    with open("affiliates.json", "r") as infile :
-        data = json.load(infile)
-    aff = data['affiliates']
-    affiliate = None
-    for link in aff :
-        affiliator = link[0]
-        affiliate = link[1]
-        if affiliator == uid :
-            return affiliate
-    return None
+caseslist = [case['Name'] for case in get_cases()]
 
-
-def set_affiliate(uid, uid2) :
-    with open("affiliates.json", "r") as infile :
-        data = json.load(infile)
-    data['affiliates'].append([uid, uid2])
-    with open("affiliates.json", "w") as outfile :
-        json.dump(data, outfile)
-        outfile.close()
-
-
-def register_user(uid) :
+def get_affiliate(uid):
     data = readdata()
-    data["gems"].append([uid, 0, 100000000])
+    return data['users'][uid].get("Affiliate", None)
+
+def set_affiliate(uid, uid2):
+    data = readdata()
+    data['users'][uid]["Affiliate"] = uid2
+    writedata(data)
+def is_registered(uid):
+    data = readdata()
+    return uid in data['users']
+
+def register_user(uid):
+    if not is_registered(uid):
+        data = readdata()
+        data["users"][uid] = {
+            "Gems": 0,
+            "CrashJoinAmount": 100000000,
+            "Rakeback": 0
+        }
+        writedata(data)
+
+def get_gems(uid):
+    try:
+        data = readdata()
+        return data['users'][uid]['Gems']
+    except:
+        pass
+
+def set_gems(uid, gems):
+    try :
+        data = readdata()
+        data['users'][uid]['Gems'] = gems
+        writedata(data)
+    except:
+        pass
+
+def get_rake_back(uid):
+    data = readdata()
+    return data['users'][uid].get("Rakeback", 0)
+
+def set_rake_back(uid, amount):
+    data = readdata()
+    data['users'][uid]['Rakeback'] = amount
     writedata(data)
 
-
-def is_registered(uid) :
-    data = readdata()
-    found = False
-    for user in data['gems'] :
-        if user[0] == uid :
-            found = True
-    return found
-
-
-def get_gems(uid) :
-    data = readdata()
-    gems = 0
-    for user in data['gems'] :
-        if user[0] == uid :
-            gems = user[1]
-    return gems
-
-
-def set_gems(uid, gems) :
-    data = readdata()
-    count = 0
-    for user in data['gems'] :
-        if user[0] == uid :
-            data['gems'][count][1] = gems
-        count += 1
-    writedata(data)
-
-
-def get_rake_back(uid) :
-    data = readdata()
-    rakeback = 0
-    for person in data['gems'] :
-        uid2 = person[0]
-        if uid2 == uid :
-            if not len(person) >= 4 :
-                person.append(0)
-                writedata(data)
-                return 0
-            else :
-                return person[3]
-
-
-def set_rake_back(uid, amount) :
-    data = readdata()
-    rakeback = 0
-    for person in data['gems'] :
-        uid2 = person[0]
-        if uid2 == uid :
-            if not len(person) >= 4 :
-                person.append(amount)
-            else :
-                person[3] = amount
-    writedata(data)
-
-
-def add_rake_back(uid, amount) :
+def add_rake_back(uid, amount):
     rake_back = get_rake_back(uid)
     set_rake_back(uid, rake_back + amount)
 
+def add_gems(uid, gems):
+    try:
+        current_gems = get_gems(uid)
+        set_gems(uid, current_gems + gems)
+    except:
+        pass
 
-def add_gems(uid, gems) :
-    set_gems(uid, get_gems(uid) + gems)
+def subtract_gems(uid, gems):
+    try :
+        current_gems = get_gems(uid)
+        set_gems(uid, current_gems - gems)
+    except:
+        pass
 
-
-def subtract_gems(uid, gems) :
-    set_gems(uid, get_gems(uid) - gems)
-
-
-add_gems("123", 20)
-
-
-def set_crash_join(uid, gems) :
+def set_crash_join(uid, amount):
     data = readdata()
-    count = 0
-    for user in data['gems'] :
-        if user[0] == uid :
-            data['gems'][count][2] = gems
-        count += 1
+    data['users'][uid]['CrashJoinAmount'] = amount
     writedata(data)
 
-
-def get_crash_join_amount(uid) :
+def get_crash_join_amount(uid):
     data = readdata()
-    gems = 0
-    for user in data['gems'] :
-        if user[0] == uid :
-            gems = user[2]
-    return gems
+    return data['users'][uid]['CrashJoinAmount']
 
 
 def send_message(message) :
@@ -354,8 +302,8 @@ class SystemRainButtons(discord.ui.View) :
             embed = discord.Embed(title=f"{self.emoji} Rain In Progress",
                                   description=f"A Rain Has Been Started By ``System``",
                                   color=0x2ea4ff)
-            embed.set_author(name="Gamble Bot",
-                             icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+            embed.set_author(name="Gems Rain",
+                             icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
             embed.set_footer(text="rains")
             embed.add_field(name="Details",
                             value=f":gem: **Amount:** ``{add_suffix(self.amount)}``\n:money_mouth: **Entries:** ``{len(self.entries)}``\n:gem: **Gems Per Person:** ``{add_suffix(self.amount / len(self.entries))}``\n:clock1: **Ends:** {self.ends}")
@@ -386,8 +334,8 @@ async def system_rain(amount, duration):
     embed = discord.Embed(title=f"{emoji} Rain In Progress",
                           description=f"A Rain Has Been Started By ``System``",
                           color=0x2ea4ff)
-    embed.set_author(name="Gamble Bot",
-                     icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+    embed.set_author(name="Gems Rain",
+                     icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
     embed.set_footer(text="rains")
     embed.add_field(name="Details",
                     value=f":gem: **Amount:** ``{add_suffix(amount)}``\n:money_mouth: **Entries:** ``{0}``\n:gem: **Gems Per Person:** ``{add_suffix(amount / joined)}``\n:clock1: **Ends:** <t:{round(time.time() + duration)}:R>")
@@ -405,8 +353,8 @@ async def system_rain(amount, duration):
     embed = discord.Embed(title=":sunny: Rain Ended",
                           description=f"A Rain Has Been Started By ``System`` (ended)",
                           color=0xffe74d)
-    embed.set_author(name="Gamble Bot",
-                     icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+    embed.set_author(name="Gems Rain",
+                     icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
     embed.set_footer(text="rains")
     embed.add_field(name="Details",
                     value=f":gem: **Amount:** ``{add_suffix(amount)}``\n:money_mouth: **Entries:** ``{len(rain)}``\n:gem: **Gems Per Person:** ``{add_suffix(gpp)}``\n:clock1: **Ended:** <t:{round(time.time())}:R>")
@@ -425,6 +373,9 @@ def generate_crash_multi() :
 
 crash_info = {}
 bot = commands.Bot(command_prefix="?", intents=discord.Intents.all())
+async def log(text):
+    channel = await bot.fetch_channel(Config['Logs'])
+    await channel.send(embed=infoe(text))
 async def test_code(code, gems) :
     count = 0
     for item in codes :
@@ -533,7 +484,7 @@ async def crash_game() :
     while 1 :
         channel = bot.get_channel(int(crashid))
         crash_info["crash_point"] = generate_crash_multi()
-        print(f"Crash Started: Crashpoint: {crash_info['crash_point']}")
+        await log(f"Crash Started: Crashpoint: {crash_info['crash_point']}")
         crash_info["players"] = []
         crash_info["multi"] = 0.99
         embed = discord.Embed(title=":rocket: A Game Of Crash Is Starting", description="Press The Button To Join",
@@ -579,7 +530,6 @@ async def crash_game() :
         await asyncio.sleep(5)
         await crash_info["msg"].delete()
 
-
 @bot.event
 async def on_ready() :
     print("Bot Is Online And Listening For Commands.")
@@ -593,23 +543,41 @@ async def on_ready() :
 async def register(interaction: discord.Interaction) :
     if not is_registered(str(interaction.user.id)) :
         register_user(str(interaction.user.id))
+        await log(f"<@{interaction.user.id}> Registered")
         embed = discord.Embed(title=":white_check_mark: Registered User",
                               description=":gem: You Can Now Deposit, Withdraw And Gamble Your Gems! Have Fun!",
                               color=0x00ff33)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="/register")
         await interaction.response.send_message(embed=embed)
     else :
         embed = discord.Embed(title=":x: Error",
                               description="You Are Already Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="/register")
         await interaction.response.send_message(embed=embed)
 
+class DepositButtons(discord.ui.View) :
+    def __init__(self, message, username) :
+        super().__init__(timeout=None)
+        self.message = message
+        self.username = username
+        self.setup_buttons()
 
+    def setup_buttons(self) :
+        button = discord.ui.Button(label="Copy Username", custom_id=f"1", style=discord.ButtonStyle.green, emoji="📋")
+        button.callback = self.button_user
+        self.add_item(button)
+        button = discord.ui.Button(label="Copy Code", custom_id=f"2", style=discord.ButtonStyle.green, emoji="📋")
+        button.callback = self.button_code
+        self.add_item(button)
+    async def button_user(self, interaction: discord.Interaction):
+        await interaction.response.send_message(content=self.username,ephemeral=True)
+    async def button_code(self, interaction: discord.Interaction):
+        await interaction.response.send_message(content=self.message, ephemeral=True)
 @bot.tree.command(name="deposit", description="Deposit Some Gems To Gamble")
 async def deposit(interaction: discord.Interaction) :
     if is_registered(str(interaction.user.id)) :
@@ -623,17 +591,17 @@ async def deposit(interaction: discord.Interaction) :
                               color=0x2eb9ff)
         embed.add_field(name="Mailbox",
                         value=f":keyboard: **Username:** ``{username}``\n:speech_balloon: **Message:** ``{code}``\n:gem: **Gems:** ``Any``\n**MAKE SURE YOUR CODE ISN'T CENSORED TYPE IT OUT IN CHAT**")
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="/deposit")
-        await interaction.response.send_message(embed=embed)
+        await interaction.response.send_message(embed=embed,view=DepositButtons(username=username,message=code))
 
     else :
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="/deposit")
         await interaction.response.send_message(embed=embed)
 
@@ -662,16 +630,16 @@ async def info(interaction: discord.Interaction) :
         else :
             embed.add_field(name=f"Stats",
                             value=f"\n\n:gem: **Gems:** ``{gems_formatted}``\n:rocket: **Affiliated To:** <@{get_affiliate(str(interaction.user.id))}>")
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="/info")
         await interaction.response.send_message(embed=embed)
     else :
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="/balance")
         await interaction.response.send_message(embed=embed)
 
@@ -690,8 +658,8 @@ async def rake(interaction: discord.Interaction) :
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="rakeback")
         await interaction.response.send_message(embed=embed)
 
@@ -704,6 +672,7 @@ async def claimrake(interaction: discord.Interaction) :
         if rake_back > 0 :
             set_rake_back(uid, 0)
             add_gems(uid, rake_back)
+            await log(f"<@{uid}> Claimed {add_suffix(rake_back)} Rakeback")
             embed = discord.Embed(title=f":white_check_mark: Claimed Rakeback",
                                   description=f"You Claimed :gem: ``{add_suffix(rake_back)}``",
                                   color=0x88ff70)
@@ -712,16 +681,16 @@ async def claimrake(interaction: discord.Interaction) :
             embed = discord.Embed(title=":x: Error",
                                   description="You Dont Have Anything To Claim!",
                                   color=0xff0000)
-            embed.set_author(name="Gamble Bot",
-                             icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+            embed.set_author(name="Gems Rain",
+                             icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
             embed.set_footer(text="rakeback")
             await interaction.response.send_message(embed=embed)
     else :
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="rakeback")
         await interaction.response.send_message(embed=embed)
 
@@ -735,8 +704,8 @@ async def affiliate(interaction: discord.Interaction, user: discord.Member) :
             embed = discord.Embed(title=":x: Error",
                                   description="You Are Already Affiliated To Someone!",
                                   color=0xff0000)
-            embed.set_author(name="Gamble Bot",
-                             icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+            embed.set_author(name="Gems Rain",
+                             icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
             embed.set_footer(text="/affiliate")
             await interaction.response.send_message(embed=embed)
             return
@@ -744,8 +713,8 @@ async def affiliate(interaction: discord.Interaction, user: discord.Member) :
         embed = discord.Embed(title=":x: Error",
                               description="You Arent Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="/affiliate")
         await interaction.response.send_message(embed=embed)
         return
@@ -753,13 +722,14 @@ async def affiliate(interaction: discord.Interaction, user: discord.Member) :
         embed = discord.Embed(title=":x: Error",
                               description="You Cant Affiliate Yourself Bozo!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="/affiliate")
         await interaction.response.send_message(embed=embed)
         return
     set_affiliate(uid, str(user.id))
-    add_gems(uid, 250000000)
+    await log(f"<@{uid}> Affiliated <@{user.id}>")
+    add_gems(uid, 500000000)
     embed = discord.Embed(title="",
                           description=f":white_check_mark: You Are Now Affiliated To <@{user.id}>",
                           color=0x98ff61)
@@ -774,8 +744,8 @@ async def crashamount(interaction: discord.Interaction, bet: str) :
         embed = discord.Embed(title=":gem: Set Crash Join Amount",
                               description=f"Your crash join amount has been set to ``{add_suffix(bet)}``, This will now be your bet when you join a game of crash",
                               color=0x2eb9ff)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="/balance")
         await interaction.response.send_message(embed=embed)
         set_crash_join(uid, bet)
@@ -783,8 +753,8 @@ async def crashamount(interaction: discord.Interaction, bet: str) :
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="/crash")
         await interaction.response.send_message(embed=embed)
 
@@ -816,32 +786,32 @@ async def withdraw(interaction: discord.Interaction, amount: str, uname: str) :
                 embed = discord.Embed(title=":gem: Withdraw",
                                       description=f"Withdrew {gems_formatted} Gems. It Should Take Around 60s To Recieve The Gems In The Mail On Your Account: {uname}",
                                       color=0x2eb9ff)
-                embed.set_author(name="Gamble Bot",
-                                 icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+                embed.set_author(name="Gems Rain",
+                                 icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
                 embed.set_footer(text="/withdraw")
                 await interaction.response.send_message(embed=embed)
             else :
                 embed = discord.Embed(title=":x: Error",
                                       description="You Can Only Withdraw Over 1m",
                                       color=0xff0000)
-                embed.set_author(name="Gamble Bot",
-                                 icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+                embed.set_author(name="Gems Rain",
+                                 icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
                 embed.set_footer(text="/withdraw")
                 await interaction.response.send_message(embed=embed)
         else :
             embed = discord.Embed(title=":x: Error",
                                   description="You Are Too Poor For This Withdraw xD!",
                                   color=0xff0000)
-            embed.set_author(name="Gamble Bot",
-                             icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+            embed.set_author(name="Gems Rain",
+                             icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
             embed.set_footer(text="/withdraw")
             await interaction.response.send_message(embed=embed)
     else :
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="/withdraw")
         await interaction.response.send_message(embed=embed)
 
@@ -857,6 +827,7 @@ async def tip(interaction: discord.Interaction, amount: str, user: discord.Membe
                 subtract_gems(str(interaction.user.id), amount)
                 time.sleep(0.5)
                 add_gems(str(user.id), amount)
+                await log(f"<@{interaction.user.id}> Tipped {add_suffix(amount)} To <@{user.id}>")
                 gems = amount
                 if gems >= 1000000000000 :  # if gems are greater than or equal to 1 trillion
                     gems_formatted = f"{gems / 1000000000000:.1f}t"  # display gems in trillions with one decimal point
@@ -871,8 +842,8 @@ async def tip(interaction: discord.Interaction, amount: str, user: discord.Membe
                 embed = discord.Embed(title=":gem: Sent Gems",
                                       description=f"",
                                       color=0x2eb9ff)
-                embed.set_author(name="Gamble Bot",
-                                 icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+                embed.set_author(name="Gems Rain",
+                                 icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
                 embed.set_footer(text="/tip")
                 embed.add_field(name=":mailbox: Tip",
                                 value=f":outbox_tray: Sender: <@{interaction.user.id}>\n:inbox_tray: Receiver: <@{user.id}>\n:gem: Amount: ``{gems_formatted}``")
@@ -881,24 +852,24 @@ async def tip(interaction: discord.Interaction, amount: str, user: discord.Membe
                 embed = discord.Embed(title=":x: Error",
                                       description="You Are Too Poor For This Tip XD!",
                                       color=0xff0000)
-                embed.set_author(name="Gamble Bot",
-                                 icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+                embed.set_author(name="Gems Rain",
+                                 icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
                 embed.set_footer(text="/tip")
                 await interaction.response.send_message(embed=embed)
         else :
             embed = discord.Embed(title=":x: Error",
                                   description="The User You Are Trying To Send Gems To Isn't Registered!",
                                   color=0xff0000)
-            embed.set_author(name="Gamble Bot",
-                             icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+            embed.set_author(name="Gems Rain",
+                             icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
             embed.set_footer(text="/tip")
             await interaction.response.send_message(embed=embed)
     else :
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="/tip")
         await interaction.response.send_message(embed=embed)
 
@@ -933,8 +904,8 @@ class RainButtons(discord.ui.View) :
             embed = discord.Embed(title=f"{self.emoji} Rain In Progress",
                                   description=f"A Rain Has Been Started By <@{self.starter}>",
                                   color=0x2ea4ff)
-            embed.set_author(name="Gamble Bot",
-                             icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+            embed.set_author(name="Gems Rain",
+                             icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
             embed.set_footer(text="rains")
             embed.add_field(name="Details",
                             value=f":gem: **Amount:** ``{add_suffix(self.amount)}``\n:money_mouth: **Entries:** ``{len(self.entries)}``\n:gem: **Gems Per Person:** ``{add_suffix(self.amount / len(self.entries))}``\n:clock1: **Ends:** {self.ends}")
@@ -953,8 +924,8 @@ async def createrain(interaction: discord.Interaction, amount: str, duration: in
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="rains")
         await interaction.response.send_message(embed=embed)
         return
@@ -963,8 +934,8 @@ async def createrain(interaction: discord.Interaction, amount: str, duration: in
         embed = discord.Embed(title=":x: Error",
                               description="Minimum Rain Amount Is 500m",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="rains")
         await interaction.response.send_message(embed=embed)
         return
@@ -973,8 +944,8 @@ async def createrain(interaction: discord.Interaction, amount: str, duration: in
         embed = discord.Embed(title=":x: Error",
                               description="Too Poor XD",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="rains")
         await interaction.response.send_message(embed=embed)
         return
@@ -1001,8 +972,8 @@ async def createrain(interaction: discord.Interaction, amount: str, duration: in
     embed = discord.Embed(title=f"{emoji} Rain In Progress",
                           description=f"A Rain Has Been Started By <@{interaction.user.id}>",
                           color=0x2ea4ff)
-    embed.set_author(name="Gamble Bot",
-                     icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+    embed.set_author(name="Gems Rain",
+                     icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
     embed.set_footer(text="rains")
     embed.add_field(name="Details",
                     value=f":gem: **Amount:** ``{add_suffix(amount)}``\n:money_mouth: **Entries:** ``{0}``\n:gem: **Gems Per Person:** ``{add_suffix(amount / joined)}``\n:clock1: **Ends:** <t:{round(time.time() + duration)}:R>")
@@ -1021,8 +992,8 @@ async def createrain(interaction: discord.Interaction, amount: str, duration: in
     embed = discord.Embed(title=":sunny: Rain Ended",
                           description=f"A Rain Has Been Started By <@{interaction.user.id}> (ended)",
                           color=0xffe74d)
-    embed.set_author(name="Gamble Bot",
-                     icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+    embed.set_author(name="Gems Rain",
+                     icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
     embed.set_footer(text="rains")
     embed.add_field(name="Details",
                     value=f":gem: **Amount:** ``{add_suffix(amount)}``\n:money_mouth: **Entries:** ``{len(rain)}``\n:gem: **Gems Per Person:** ``{add_suffix(gpp)}``\n:clock1: **Ended:** <t:{round(time.time())}:R>")
@@ -1055,7 +1026,7 @@ class MinesButtons(discord.ui.View) :
                         self.add_item(button)
                     if square == "s" :
                         button = discord.ui.Button(label="", custom_id=f"{row} {column}",
-                                                   style=discord.ButtonStyle.green, emoji="⭐")
+                                                   style=discord.ButtonStyle.green, emoji="✅")
                         button.callback = self.button_cashout
                         self.add_item(button)
         else :
@@ -1070,13 +1041,13 @@ class MinesButtons(discord.ui.View) :
                         self.add_item(button)
                     if square == "s" :
                         button = discord.ui.Button(label="", custom_id=f"{row} {column}",
-                                                   style=discord.ButtonStyle.green, emoji="⭐")
+                                                   style=discord.ButtonStyle.green, emoji="✅")
                         button.callback = self.button_cashout
                         button.disabled = True
                         self.add_item(button)
                     if square == "m" :
                         button = discord.ui.Button(label="", custom_id=f"{row} {column}", style=discord.ButtonStyle.red,
-                                                   emoji="💣")
+                                                   emoji="💀")
                         button.callback = self.button_cashout
                         button.disabled = True
                         self.add_item(button)
@@ -1125,8 +1096,8 @@ async def mines(interaction: discord.Interaction, mines_amount: int, bet: str) :
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="games")
         await interaction.response.send_message(embed=embed)
         return
@@ -1135,8 +1106,8 @@ async def mines(interaction: discord.Interaction, mines_amount: int, bet: str) :
         embed = discord.Embed(title=":x: Error",
                               description="Minimum Bet Is 100M",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="games")
         await interaction.response.send_message(embed=embed)
         return
@@ -1145,8 +1116,8 @@ async def mines(interaction: discord.Interaction, mines_amount: int, bet: str) :
         embed = discord.Embed(title=":x: Error",
                               description="Too Poor XD",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="games")
         await interaction.response.send_message(embed=embed)
         return
@@ -1155,8 +1126,8 @@ async def mines(interaction: discord.Interaction, mines_amount: int, bet: str) :
         embed = discord.Embed(title=":x: Error",
                               description="Invalid Number Of Mines",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="games")
         await interaction.response.send_message(embed=embed)
         return
@@ -1172,17 +1143,8 @@ async def mines(interaction: discord.Interaction, mines_amount: int, bet: str) :
             ["", "", "", "", ""],
             ["", "", "", "", ""],
         ]
-        print(f"{interaction.user.name} Started A Mines Game! Board:")
-        print(board)
         coollooking = '\n'.join([' '.join(sublist) for sublist in board])
-        payload = {
-            'content' : f"{interaction.user.name} Started A Mines Game! Board:\n\n{coollooking}"
-        }
-        headers = {
-            'Content-Type' : 'application/json'
-        }
-
-        response = requests.post(Config['Mines']['Channel'], data=json.dumps(payload), headers=headers)
+        await log(f"{interaction.user.name} Started A Mines Game! Board:\n\n{coollooking}")
         await interaction.response.send_message(
             content=f":moneybag: **Winnings:** ``{add_suffix(bet * 0.95)}`` :star: **Multiplier:** ``0.95``",
             view=MinesButtons(bet=bet, board=board, bombs=mines_amount, interaction=interaction, usersafes=0,
@@ -1218,10 +1180,10 @@ def keno_diff_to_string(diff) :
 
 def amount_to_give(diff, tiles, bet) :
     if diff == "Easy" :
-        multis = [0.00, 0.00, 1.10, 2.00, 6.20, 20.00, 45.00]
+        multis = [0.00, 0.00, 1.50, 2.00, 5.00, 20.00, 50.00]
         return round(multis[tiles] * bet)
     if diff == "Hard" :
-        multis = [0.00, 0.00, 0.00, 0.00, 11.00, 50.00, 200.00]
+        multis = [0.00, 0.00, 0.00, 2.00, 10.00, 50.00, 200.00]
         return round(multis[tiles] * bet)
 
 
@@ -1380,8 +1342,8 @@ async def keno(interaction: discord.Interaction, bet: str, difficulty: str) :
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="games")
         await interaction.response.send_message(embed=embed)
         return
@@ -1390,8 +1352,8 @@ async def keno(interaction: discord.Interaction, bet: str, difficulty: str) :
         embed = discord.Embed(title=":x: Error",
                               description="Difficulty Can Only Be: Easy or Hard",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="games")
         await interaction.response.send_message(embed=embed)
         return
@@ -1400,8 +1362,8 @@ async def keno(interaction: discord.Interaction, bet: str, difficulty: str) :
         embed = discord.Embed(title=":x: Error",
                               description="Minimum Bet Is 100M",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="games")
         await interaction.response.send_message(embed=embed)
         return
@@ -1410,8 +1372,8 @@ async def keno(interaction: discord.Interaction, bet: str, difficulty: str) :
         embed = discord.Embed(title=":x: Error",
                               description="Too Poor XD",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="games")
         await interaction.response.send_message(embed=embed)
         return
@@ -1506,8 +1468,8 @@ async def towers(interaction: discord.Interaction, bet: str) :
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="games")
         await interaction.response.send_message(embed=embed)
         return
@@ -1516,8 +1478,8 @@ async def towers(interaction: discord.Interaction, bet: str) :
         embed = discord.Embed(title=":x: Error",
                               description="Minimum Bet Is 100M",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="games")
         await interaction.response.send_message(embed=embed)
         return
@@ -1526,8 +1488,8 @@ async def towers(interaction: discord.Interaction, bet: str) :
         embed = discord.Embed(title=":x: Error",
                               description="Too Poor XD",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="games")
         await interaction.response.send_message(embed=embed)
         return
@@ -1535,6 +1497,7 @@ async def towers(interaction: discord.Interaction, bet: str) :
         subtract_gems(uid, bet)
         af = get_affiliate(str(interaction.user.id))
         add_gems(af, bet * 0.01)
+        await log(f"<@{uid}> Bet {add_suffix(bet)}> On Towers")
         await interaction.response.send_message(content=f"", view=TowersButtons(bet=bet, interaction=interaction))
 
 
@@ -1589,8 +1552,8 @@ class FlipButtons(discord.ui.View) :
             embed.add_field(name="Flip", value=f":coin: **{self.side}:** <@{self.user}>\n:coin: **Heads:** du<@{uid}>")
         if choice == self.side :
             embed.add_field(name="Winner", value=f"<@{self.user}> - {add_suffix(round(self.bet * 1.95))}")
-            add_gems(self.user, round(self.bet * 1.95))
-            add_bet(self.user, self.bet, round(self.bet * 1.95))
+            add_gems(self.user, round(self.bet * 2.05))
+            add_bet(self.user, self.bet, round(self.bet * 2.05))
             add_bet(uid, self.bet, 0)
         else :
             embed.add_field(name="Winner", value=f"<@{uid}> - {add_suffix(round(self.bet * 1.95))}")
@@ -1647,8 +1610,8 @@ async def flip(interaction: discord.Interaction, bet: str, side: CoinSide) :
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="games")
         await interaction.response.send_message(embed=embed)
         return
@@ -1657,8 +1620,8 @@ async def flip(interaction: discord.Interaction, bet: str, side: CoinSide) :
         embed = discord.Embed(title=":x: Error",
                               description="Minimum Bet Is 100M",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="games")
         await interaction.response.send_message(embed=embed)
         return
@@ -1667,8 +1630,8 @@ async def flip(interaction: discord.Interaction, bet: str, side: CoinSide) :
         embed = discord.Embed(title=":x: Error",
                               description="Too Poor XD",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="games")
         await interaction.response.send_message(embed=embed)
         return
@@ -1707,15 +1670,15 @@ async def cases(interaction: discord.Interaction):
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="cases")
         await interaction.response.send_message(embed=embed)
         return
     embed = discord.Embed(title="Cases", description="Viewing a list of all cases currently in the bot.",
                           color=0x2abccf)
-    embed.set_author(name="Gamble Bot",
-                     icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+    embed.set_author(name="Gems Rain",
+                     icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
     for case in get_cases():
         infostr = ""
         for pet in case['Drops']:
@@ -1730,8 +1693,8 @@ async def unbox_case(interaction: discord.Interaction, case_name: str):
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="cases")
         await interaction.response.send_message(embed=embed)
         return
@@ -1744,8 +1707,8 @@ async def unbox_case(interaction: discord.Interaction, case_name: str):
         embed = discord.Embed(title=":x: Error",
                               description="Invalid Case! Do /cases For A List Of All Cases",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="cases")
         await interaction.response.send_message(embed=embed)
         return
@@ -1753,8 +1716,8 @@ async def unbox_case(interaction: discord.Interaction, case_name: str):
         embed = discord.Embed(title=":x: Error",
                               description="You Cannot Afford This Case",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="cases")
         await interaction.response.send_message(embed=embed)
         return
@@ -1783,8 +1746,8 @@ async def unbox_cases(interaction: discord.Interaction, case_name: str, amount: 
         embed = discord.Embed(title=":x: Error",
                               description="You Are Not Registered!",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="cases")
         await interaction.response.send_message(embed=embed)
         return
@@ -1797,8 +1760,8 @@ async def unbox_cases(interaction: discord.Interaction, case_name: str, amount: 
         embed = discord.Embed(title=":x: Error",
                               description="Invalid Amount! Please Choose Between 2 and 10,000",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="cases")
         await interaction.response.send_message(embed=embed)
         return
@@ -1806,8 +1769,8 @@ async def unbox_cases(interaction: discord.Interaction, case_name: str, amount: 
         embed = discord.Embed(title=":x: Error",
                               description="Invalid Case! Do /cases For A List Of All Cases",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="cases")
         await interaction.response.send_message(embed=embed)
         return
@@ -1815,8 +1778,8 @@ async def unbox_cases(interaction: discord.Interaction, case_name: str, amount: 
         embed = discord.Embed(title=":x: Error",
                               description="You Cannot Afford This Much Cases",
                               color=0xff0000)
-        embed.set_author(name="Gamble Bot",
-                         icon_url="https://cdn.itemsatis.com/uploads/post_images/pet-simulator-x-10b-gems-81004359.png")
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
         embed.set_footer(text="cases")
         await interaction.response.send_message(embed=embed)
         return
@@ -1901,8 +1864,449 @@ async def unbox_cases(interaction: discord.Interaction, case_name: str, amount: 
                             value=f":gem: **Total Price**: ``{add_suffix(casedata['Price'] * amount)}``\n:gem: **Total Winnings**: ``{add_suffix(totalwinnings)}``\n:gem: **Profit**: ``-{add_suffix(totalcost - totalwinnings)}``",
                             inline=False)
         await interaction.edit_original_response(embed=embed)
+class UpgradeButton(discord.ui.View) :
+    def __init__(self, interaction, bet, chance, multiplier, roll=1):
+        super().__init__(timeout=None)
+        self.interaction = interaction
+        self.bet = bet
+        self.chance = chance
+        self.multiplier = multiplier
+        self.roll = roll
+        self.setup_buttons()
+
+    def setup_buttons(self) :
+        button = discord.ui.Button(label=f"Upgrade", custom_id=f"join", style=discord.ButtonStyle.blurple, emoji="💰")
+        button.callback = self.join_clicked
+        self.add_item(button)
+    async def join_clicked(self, interaction: discord.Interaction):
+        uid = str(interaction.user.id)
+        print("1")
+        if uid != str(self.interaction.user.id):
+            return
+        print("2")
+        if self.bet > get_gems(uid):
+            await self.interaction.edit_original_response(embed=fail("You Can No Longer Afford This Bet"),view=None)
+            return
+        print("3")
+        subtract_gems(uid,self.bet)
+        won = roll_percentage(self.chance)
+        if won:
+            print("4")
+            add_gems(uid, round(self.bet*self.multiplier))
+            embed = discord.Embed(title="Upgrade Won!",description="You won this upgrade!",color=0x4dff58)
+            embed.add_field(name="Input", value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:four_leaf_clover: **Chance:** ``{round(self.chance, 1)}%``\n:star: **Multiplier:** ``{self.multiplier}x``\n:moneybag: **Winnings:** ``{add_suffix(round(self.bet*self.multiplier))}``")
+            await self.interaction.edit_original_response(embed=embed, view=None)
+        else:
+            print("5")
+            embed = discord.Embed(title="Upgrade Lost!",description="You lost this upgrade!",color=0xff6b6b)
+            embed.add_field(name="Input", value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:four_leaf_clover: **Chance:** ``{round(self.chance, 1)}%``\n:star: **Multiplier:** ``{self.multiplier}x``\n:moneybag: **Winnings:** ``{add_suffix(round(self.bet*self.multiplier))}``")
+            await self.interaction.edit_original_response(embed=embed, view=None)
+
+green = 0x4dff58
+red = 0xff6b6b
+yellow = 0xfff93d
+
+@bot.tree.command(name="upgrader", description="Put Some Gems In The Upgrade Machine!")
+async def upgrade(interaction: discord.Interaction, bet: str, multiplier: float):
+    bet = suffix_to_int(bet)
+    uid = str(interaction.user.id)
+    if not is_registered(uid) :
+        embed = discord.Embed(title=":x: Error",
+                              description="You Are Not Registered!",
+                              color=0xff0000)
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
+        embed.set_footer(text="cases")
+        await interaction.response.send_message(embed=embed)
+        return
+    if multiplier < 1.1:
+        embed = discord.Embed(title=":x: Error",
+                              description="Invalid Multiplier! Cannot be under 1.1",
+                              color=0xff0000)
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
+        embed.set_footer(text="cases")
+        await interaction.response.send_message(embed=embed)
+        return
+    if get_gems(uid) < bet:
+        embed = discord.Embed(title=":x: Error",
+                              description="You Cannot Afford This Bet",
+                              color=0xff0000)
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
+        embed.set_footer(text="cases")
+        await interaction.response.send_message(embed=embed)
+        return
+    if bet < 100000000:
+        embed = discord.Embed(title=":x: Error",
+                              description="Cannot bet under 100m",
+                              color=0xff0000)
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
+        embed.set_footer(text="cases")
+        await interaction.response.send_message(embed=embed)
+        return
+    embed = discord.Embed(title="Upgrade Machine", description="Have a chance at upgrading your bet or losing everything!",color=0x4dbbff)
+    win_chance = multiplier_to_percentage(multiplier,Config['Upgrader']['House'])
+    winnings = round(bet*multiplier)
+    embed.add_field(name="Input",value=f":gem: **Bet:** ``{add_suffix(bet)}``\n:four_leaf_clover: **Chance:** ``{round(win_chance, 1)}%``\n:star: **Multiplier:** ``{multiplier}x``\n:moneybag: **Winnings:** ``{add_suffix(winnings)}``")
+    await interaction.response.send_message(embed=embed,view=UpgradeButton(interaction,bet,win_chance,multiplier))
+def roll_dice():
+    return random.randint(1, 6)
+@bot.tree.command(name="dice", description="Roll A Dice Against The Bot")
+async def dice(interaction: discord.Interaction, bet: str):
+    bet = suffix_to_int(bet)
+    uid = str(interaction.user.id)
+    if not is_registered(uid) :
+        embed = discord.Embed(title=":x: Error",
+                              description="You Are Not Registered!",
+                              color=0xff0000)
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
+        embed.set_footer(text="cases")
+        await interaction.response.send_message(embed=embed)
+        return
+    if get_gems(uid) < bet :
+        embed = discord.Embed(title=":x: Error",
+                              description="You Cannot Afford This Bet",
+                              color=0xff0000)
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
+        embed.set_footer(text="cases")
+        await interaction.response.send_message(embed=embed)
+        return
+    if bet < 100000000 :
+        embed = discord.Embed(title=":x: Error",
+                              description="Cannot bet under 100m",
+                              color=0xff0000)
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
+        embed.set_footer(text="cases")
+        await interaction.response.send_message(embed=embed)
+        return
+    yourdie = roll_dice()
+    botdie = roll_dice()
+    subtract_gems(uid,bet)
+    winnings = 0
+    if yourdie > botdie:
+        winnings = round((bet*2)/1.02)
+        embed = discord.Embed(title="You Rolled A Dice!", description="You Rolled Higher Than The Bot. You Win!", color=green)
+        embed.add_field(name="Game",value=f"🎲 **You Rolled:** ``{yourdie}``\n🎲 **Bot Rolled:** ``{botdie}``\n:gem: **Winnings:** ``{add_suffix(winnings)}``")
+    elif yourdie < botdie:
+        winnings = 0
+        embed = discord.Embed(title="You Rolled A Dice!", description="You Rolled Lower Than The Bot. You Lose!",
+                              color=red)
+        embed.add_field(name="Game",
+                        value=f"🎲 **You Rolled:** ``{yourdie}``\n🎲 **Bot Rolled:** ``{botdie}``\n:gem: **Winnings:** ``{add_suffix(winnings)}``")
+    else:
+        winnings = bet
+        embed = discord.Embed(title="You Rolled A Dice!", description="Its A Tie!",
+                              color=yellow)
+        embed.add_field(name="Game",
+                        value=f"🎲 **You Rolled:** ``{yourdie}``\n🎲 **Bot Rolled:** ``{botdie}``\n:gem: **Winnings:** ``{add_suffix(winnings)}``")
+    add_gems(uid, winnings)
+    await interaction.response.send_message(embed=embed)
+
+@bot.tree.command(name="set-gems",description="Administrator Required")
+async def setgems(interaction: discord.Interaction, user: discord.Member, gems: str):
+    gems = suffix_to_int(gems)
+    uid = str(user.id)
+    if interaction.user.guild_permissions.administrator:
+        set_gems(uid, gems)
+        await interaction.response.send_message(embed=succeed(f"Set <@{uid}> Gems To {add_suffix(gems)}"))
+@bot.tree.command(name="add-gems",description="Administrator Required")
+async def addgems(interaction: discord.Interaction, user: discord.Member, gems: str):
+    gems = suffix_to_int(gems)
+    uid = str(user.id)
+    if interaction.user.guild_permissions.administrator:
+        add_gems(uid, gems)
+        await interaction.response.send_message(embed=succeed(f"Added {add_suffix(gems)} Gems To <@{uid}>"))
+@bot.tree.command(name="remove-gems",description="Administrator Required")
+async def removegems(interaction: discord.Interaction, user: discord.Member, gems: str):
+    gems = suffix_to_int(gems)
+    uid = str(user.id)
+    if interaction.user.guild_permissions.administrator:
+        subtract_gems(uid, gems)
+        await interaction.response.send_message(embed=succeed(f"Removed {add_suffix(gems)} Gems From <@{uid}>"))
+
+basedeck = [
+    "2♠", "3♠", "4♠", "5♠", "6♠", "7♠", "8♠", "9♠", "10♠", "J♠", "Q♠", "K♠", "A♠",
+    "2♥", "3♥", "4♥", "5♥", "6♥", "7♥", "8♥", "9♥", "10♥", "J♥", "Q♥", "K♥", "A♥",
+    "2♦", "3♦", "4♦", "5♦", "6♦", "7♦", "8♦", "9♦", "10♦", "J♦", "Q♦", "K♦", "A♦",
+    "2♣", "3♣", "4♣", "5♣", "6♣", "7♣", "8♣", "9♣", "10♣", "J♣", "Q♣", "K♣", "A♣"
+]
+def card_to_value(card):
+    card = card[0]
+    if card == "J":
+        card = 10
+    if card == "Q":
+        card = 10
+    if card == "K":
+        card = 10
+    if card == "A":
+        card = 11
+    return int(card)
+
+def hand_to_value(hand):
+    dvalue = 0
+    for card in hand:
+        dvalue += card_to_value(card)
+    return dvalue
+
+def pick_card(deck):
+    card = random.choice(deck)
+    deck.remove(card)
+    return card, deck
+
+def render_blackjack_hand(hand, hide):
+    if not hide:
+        Hstr = ""
+        Hvalue = hand_to_value(hand)
+        for card in hand:
+            Hstr += f"**{card}**  "
+        Hstr += f"\n\n**Value:** ``{Hvalue}``"
+        return Hstr
+    else:
+        Hstr = ""
+        Hvalue = card_to_value(hand[0])
+        Hstr += f"**{hand[0]}**  ??"
+        Hstr += f"\n\n**Value:** ``{Hvalue}``"
+        return Hstr
+
+class BJButton(discord.ui.View) :
+    def __init__(self, interaction, bet, user_hand, dealer_hand, deck):
+        super().__init__(timeout=None)
+        self.interaction = interaction
+        self.bet = bet
+        self.user_hand = user_hand
+        self.dealer_hand = dealer_hand
+        self.deck = deck
+        self.buttons = []
+        self.setup_buttons()
+
+    def setup_buttons(self) :
+        button = discord.ui.Button(label=f"Hit", custom_id=f"hit", style=discord.ButtonStyle.green, emoji="🎯")
+        button.callback = self.hit_clicked
+        self.buttons.append(button)
+        self.add_item(button)
+        button = discord.ui.Button(label=f"Stand", custom_id=f"stand", style=discord.ButtonStyle.red, emoji="⚫")
+        button.callback = self.stand_clicked
+        self.buttons.append(button)
+        self.add_item(button)
+        button = discord.ui.Button(label=f"Double", custom_id=f"double", style=discord.ButtonStyle.blurple, emoji="💰")
+        button.callback = self.double_clicked
+        self.buttons.append(button)
+        self.add_item(button)
+    async def hit_clicked(self, interaction: discord.Interaction):
+        uid = str(interaction.user.id)
+        await interaction.response.defer()
+        if uid != str(self.interaction.user.id):
+            return
+        card, self.deck = pick_card(self.deck)
+        self.user_hand.append(card)
+        if hand_to_value(self.user_hand) == 21 :
+            add_gems(uid,self.bet*2)
+            embed = discord.Embed(title="Blackjack - You Won!", description="You Got 21!", color=green)
+            embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(self.user_hand, False))
+            embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(self.dealer_hand, False))
+            embed.add_field(name="👑 Bet",
+                            value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(self.bet * 2)}``")
+            await self.interaction.edit_original_response(embed=embed,view=None)
+            return
+        if hand_to_value(self.user_hand) >= 22:
+            embed = discord.Embed(title="Blackjack - You Lost!", description="You Went Bust!", color=red)
+            embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(self.user_hand, False))
+            embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(self.dealer_hand, False))
+            embed.add_field(name="👑 Bet",
+                            value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(self.bet * 2)}``")
+            await self.interaction.edit_original_response(embed=embed,view=None)
+            return
+        embed = discord.Embed(title="Blackjack", description="Hit Or Stand?", color=yellow)
+        embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(self.user_hand, False))
+        embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(self.dealer_hand, True))
+        embed.add_field(name="👑 Bet",
+                        value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(self.bet * 2)}``")
+        await self.interaction.edit_original_response(embed=embed, view=BJButton(self.interaction, self.bet, self.user_hand, self.dealer_hand, self.deck))
+    async def stand_clicked(self, interaction: discord.Interaction):
+        uid = str(interaction.user.id)
+        await interaction.response.defer()
+        if uid != str(self.interaction.user.id):
+            return
+        await self.interaction.edit_original_response(view=None)
+        while 1:
+            if hand_to_value(self.dealer_hand) >= 17:
+                break
+            card, self.deck = pick_card(self.deck)
+            self.dealer_hand.append(card)
+        if hand_to_value(self.dealer_hand) == 21 :
+            embed = discord.Embed(title="Blackjack - You Lost!", description="Dealer Got 21!", color=red)
+            embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(self.user_hand, False))
+            embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(self.dealer_hand, False))
+            embed.add_field(name="👑 Bet",
+                            value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(self.bet * 2)}``")
+            await self.interaction.edit_original_response(embed=embed, view=None)
+            return
+        if hand_to_value(self.dealer_hand) >= 22:
+            add_gems(uid, self.bet * 2)
+            embed = discord.Embed(title="Blackjack - You Won!", description="You won", color=green)
+            embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(self.user_hand, False))
+            embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(self.dealer_hand, False))
+            embed.add_field(name="👑 Bet",
+                            value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(self.bet * 2)}``")
+            await self.interaction.edit_original_response(embed=embed,view=None)
+            return
+        if hand_to_value(self.dealer_hand) < hand_to_value(self.user_hand):
+            add_gems(uid, self.bet * 2)
+            embed = discord.Embed(title="Blackjack - You Won!", description="You won", color=green)
+            embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(self.user_hand, False))
+            embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(self.dealer_hand, False))
+            embed.add_field(name="👑 Bet",
+                            value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(self.bet * 2)}``")
+            await self.interaction.edit_original_response(embed=embed,view=None)
+        if hand_to_value(self.dealer_hand) > hand_to_value(self.user_hand):
+            embed = discord.Embed(title="Blackjack - You Lost!", description="you lost", color=red)
+            embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(self.user_hand, False))
+            embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(self.dealer_hand, False))
+            embed.add_field(name="👑 Bet",
+                            value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(self.bet * 2)}``")
+            await self.interaction.edit_original_response(embed=embed, view=None)
+            return
+    async def double_clicked(self, interaction: discord.Interaction):
+        uid = str(interaction.user.id)
+        await interaction.response.defer()
+        if uid != str(self.interaction.user.id):
+            return
+        self.bet = self.bet * 2
+        subtract_gems(uid, self.bet/2)
+        await self.interaction.edit_original_response(view=None)
+        card, self.deck = pick_card(self.deck)
+        self.user_hand.append(card)
+        if hand_to_value(self.user_hand) == 21 :
+            add_gems(uid, self.bet * 2)
+            embed = discord.Embed(title="Blackjack - You Won!", description="You Got 21!", color=green)
+            embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(self.user_hand, False))
+            embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(self.dealer_hand, False))
+            embed.add_field(name="👑 Bet",
+                            value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(self.bet * 2)}``")
+            await self.interaction.edit_original_response(embed=embed, view=None)
+            return
+        if hand_to_value(self.user_hand) >= 22 :
+            embed = discord.Embed(title="Blackjack - You Lost!", description="You Went Bust!", color=red)
+            embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(self.user_hand, False))
+            embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(self.dealer_hand, False))
+            embed.add_field(name="👑 Bet",
+                            value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(self.bet * 2)}``")
+            await self.interaction.edit_original_response(embed=embed, view=None)
+            return
+
+        while 1:
+            if hand_to_value(self.dealer_hand) >= 17:
+                break
+            card, self.deck = pick_card(self.deck)
+            self.dealer_hand.append(card)
+        if hand_to_value(self.dealer_hand) == 21 :
+            embed = discord.Embed(title="Blackjack - You Lost!", description="Dealer Got 21!", color=red)
+            embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(self.user_hand, False))
+            embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(self.dealer_hand, False))
+            embed.add_field(name="👑 Bet",
+                            value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(self.bet * 2)}``")
+            await self.interaction.edit_original_response(embed=embed, view=None)
+            return
+        if hand_to_value(self.dealer_hand) >= 22:
+            add_gems(uid, self.bet * 2)
+            embed = discord.Embed(title="Blackjack - You Won!", description="You won", color=green)
+            embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(self.user_hand, False))
+            embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(self.dealer_hand, False))
+            embed.add_field(name="👑 Bet",
+                            value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(self.bet * 2)}``")
+            await self.interaction.edit_original_response(embed=embed,view=None)
+            return
+        if hand_to_value(self.dealer_hand) < hand_to_value(self.user_hand):
+            add_gems(uid, self.bet * 2)
+            embed = discord.Embed(title="Blackjack - You Won!", description="You won", color=green)
+            embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(self.user_hand, False))
+            embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(self.dealer_hand, False))
+            embed.add_field(name="👑 Bet",
+                            value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(self.bet * 2)}``")
+            await self.interaction.edit_original_response(embed=embed,view=None)
+        if hand_to_value(self.dealer_hand) > hand_to_value(self.user_hand):
+            embed = discord.Embed(title="Blackjack - You Lost!", description="you lost", color=red)
+            embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(self.user_hand, False))
+            embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(self.dealer_hand, False))
+            embed.add_field(name="👑 Bet",
+                            value=f":gem: **Bet:** ``{add_suffix(self.bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(self.bet * 2)}``")
+            await self.interaction.edit_original_response(embed=embed, view=None)
+            return
+
+@bot.tree.command(name="blackjack",description="Play A Game Of BJ")
+async def blackjack(interaction: discord.Interaction, bet: str):
+    bet = suffix_to_int(bet)
+    uid = str(interaction.user.id)
+    if not is_registered(uid) :
+        embed = discord.Embed(title=":x: Error",
+                              description="You Are Not Registered!",
+                              color=0xff0000)
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
+        embed.set_footer(text="bj")
+        await interaction.response.send_message(embed=embed)
+        return
+    if get_gems(uid) < bet :
+        embed = discord.Embed(title=":x: Error",
+                              description="You Cannot Afford This Bet",
+                              color=0xff0000)
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
+        embed.set_footer(text="bj")
+        await interaction.response.send_message(embed=embed)
+        return
+    if bet < 100000000:
+        embed = discord.Embed(title=":x: Error",
+                              description="Cannot bet under 100m",
+                              color=0xff0000)
+        embed.set_author(name="Gems Rain",
+                         icon_url="https://cdn.discordapp.com/avatars/1134495235473428561/d0ac341d640fca84c1657d0852d105ef.png?size=1024")
+        embed.set_footer(text="bj")
+        await interaction.response.send_message(embed=embed)
+        return
+    subtract_gems(uid,bet)
+    deck = basedeck
+    user_hand = []
+    card, deck = pick_card(deck)
+    user_hand.append(card)
+    card, deck = pick_card(deck)
+    user_hand.append(card)
+    dealer_hand = []
+    card, deck = pick_card(deck)
+    dealer_hand.append(card)
+    card, deck = pick_card(deck)
+    dealer_hand.append(card)
+
+    if hand_to_value(user_hand) == 21:
+        add_gems(uid,bet*2)
+        embed = discord.Embed(title="Blackjack - You Won!", description="You Got 21!", color=green)
+        embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(user_hand, False))
+        embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(dealer_hand, False))
+        embed.add_field(name="👑 Bet",
+                        value=f":gem: **Bet:** ``{add_suffix(bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(bet * 2)}``")
+        await interaction.response.send_message(embed=embed)
+        return
+    if hand_to_value(dealer_hand) == 21:
+        embed = discord.Embed(title="Blackjack - You Lost!", description="Dealer Got 21!", color=red)
+        embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(user_hand, False))
+        embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(dealer_hand, False))
+        embed.add_field(name="👑 Bet",
+                        value=f":gem: **Bet:** ``{add_suffix(bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(bet * 2)}``")
+        await interaction.response.send_message(embed=embed)
+        return
+    embed = discord.Embed(title="Blackjack", description="Hit Or Stand?", color=yellow)
+    embed.add_field(name="👑 Your Hand", value=render_blackjack_hand(user_hand, False))
+    embed.add_field(name="👑 Dealer Hand", value=render_blackjack_hand(dealer_hand, True))
+    embed.add_field(name="👑 Bet",
+                    value=f":gem: **Bet:** ``{add_suffix(bet)}``\n:gem: **Potential Winnings:** ``{add_suffix(bet * 2)}``")
+    await interaction.response.send_message(embed=embed,view=BJButton(interaction,bet,user_hand,dealer_hand, deck))
+
 def billions(x, pos) :
     'The two args are the value and tick position'
     return '%1.1fB' % (x * 1e-9)
-
 bot.run(Config['DiscordBotToken'])
