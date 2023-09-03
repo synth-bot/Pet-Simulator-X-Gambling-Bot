@@ -46,7 +46,7 @@ Config = {
     "Rakeback" : 1, # Rakeback %
     "PathToExecutorWorkspace" : "C:/Users/henry/AppData/Local/Packages/ROBLOXCORPORATION.ROBLOX_55nm5eh3cm0pr/AC/workspace", # Path To Your Executors Workspace (for auto depos and withdraws)
     "RobloxUser" : "fersord",  # Your roblox username, people will deposit to this account
-    "DiscordBotToken": "token" # The token of the discord bot
+    "DiscordBotToken": "MTE0Nzg2ODE1MTU3NzU4Nzc5Mw.GALT7P.JGRyxcwC3qz5K8YUqujHuSyHV2bPvvdlP2s-70" # The token of the discord bot
 }
 def multiplier_to_percentage(multiplier, house):
     percentage2 = (100 / multiplier) * house
